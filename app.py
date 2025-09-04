@@ -38,6 +38,21 @@ def create_user(username, password_hash, email, phone, is_admin):
     else:
         raise ValueError("User already exists")
     db_session.close()
+
+    
+def get_user_by_user_id(user_id):
+    db_session = SessionLocal()
+    user = db_session.query(User).filter_by(id=user_id).first()
+    db_session.close()
+    if user:
+        # return consistent keys
+        return {
+            "id": user.id,
+            "username": user.username,
+            "password_hash": user.password_hash,
+            "is_admin": user.is_admin
+        }
+    return None
     
 
 def get_user_by_username(username):
@@ -45,6 +60,7 @@ def get_user_by_username(username):
     user = db_session.query(User).filter_by(username=username).first()
     db_session.close()
     if user:
+        # return consistent keys
         return {
             "id": user.id,
             "username": user.username,
@@ -157,9 +173,12 @@ def login():
     data = request.get_json()
     user = get_user_by_username(data['username'])
     if user and check_password(user, data['password']):
-        additional_claims = {"is_admin": user['is_admin']}
-        access_token = create_access_token(identity=user.id, additional_claims=additional_claims)
-        user_data = {"id": user["id"], "username": user["username"], "is_admin": user["is_admin"]}
+        if user['is_admin']:
+            additional_claims = {"is_admin": True}
+            access_token = create_access_token(identity=str(user['id']), additional_claims=additional_claims)
+        access_token = create_access_token(identity=str(user['id']))
+
+        user_data = {"id": user["id"], "username": user["username"]}
         return jsonify({'access_token': access_token, 'user': user_data})
     return jsonify({"msg": "Bad username or password"}), 401
 
@@ -176,17 +195,19 @@ def logout():
 @app.route('/api/log-tasks', methods=['POST'])
 @jwt_required()
 def log_task():
+    user_id = get_jwt_identity()
+
     db_session = SessionLocal()
 
-    data = request.form
+    data = request.get_json()
 
-    name = data.get('name')
-    due_datetime = data.get('due_datetime')
-    log_datetime = data.get('log_datetime')
-    fin_datetime = data.get('fin_datetime')
-    completed = data.get('completed')
-    memo = data.get('memo')
-    user_id = data.get('user_id')
+    name = data['name']
+    due_datetime = data['due_datetime']
+    log_datetime = data['log_datetime']
+    fin_datetime = data['fin_datetime']
+    completed = data['completed']
+    memo = data['memo']
+    user_id = int(user_id)
 
     new_task = Task(
         name=name,
@@ -292,6 +313,7 @@ def export_all():
     if not claims.get("is_admin"):
         return jsonify({"msg": "Admins only!"}), 403
     else:
+
         db_session = SessionLocal()
 
         users = db_session.query(User).all()
@@ -317,12 +339,12 @@ def export_all():
         )
 
 @app.route("/api/import-all", methods=["POST"])
-@jwt_required()
 def import_all():
     claims = get_jwt()
     if not claims.get("is_admin"):
         return jsonify({"msg": "Admins only!"}), 403
     else:
+            
         if "file" not in request.files:
             return jsonify({"error": "No file uploaded"}), 400
         
@@ -338,24 +360,21 @@ def import_all():
 
         # --- Users ---
         if "Users" in xls.sheet_names:
-            users_df = pd.read_excel(xls, sheet_name="Users").fillna("")
-
+            users_df = pd.read_excel(xls, sheet_name="Users")
             for _, row in users_df.iterrows():
                 existing = db_session.query(User).filter_by(username=row.get("username")).first()
                 if not existing:
-                    password = row.get("password") or ""
-                    password_hash = generate_password_hash(password)
                     user = User(
                         username=row.get("username"),
                         email=row.get("email"),
-                        password_hash=password_hash,
+                        password=row.get("password"),  # ⚠️ ideally hash before import
                     )
                     db_session.add(user)
                     imported_users += 1
 
         # --- Tasks ---
         if "Tasks" in xls.sheet_names:
-            tasks_df = pd.read_excel(xls, sheet_name="Tasks").fillna("")
+            tasks_df = pd.read_excel(xls, sheet_name="Tasks")
             for _, row in tasks_df.iterrows():
                 existing = db_session.query(Task).filter_by(
                     name=row.get("name"),
@@ -380,9 +399,6 @@ def import_all():
         return jsonify({
             "message": f"Imported {imported_users} users and {imported_tasks} tasks successfully"
         })
-
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
