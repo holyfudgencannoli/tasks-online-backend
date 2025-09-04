@@ -158,8 +158,10 @@ def login():
     user = get_user_by_username(data['username'])
     db_session = SessionLocal()
     user_obj = db_session.query(User).filter_by(username=data.username).first()
+
+    user_data = user_obj.to_dict()
     if user and check_password(user, data['password']):
-        additional_claims = {"is_admin": user_obj.is_admin}
+        additional_claims = {"is_admin": user_data.is_admin}
         access_token = create_access_token(identity=user.id, additional_claims=additional_claims)
         user_data = {"id": user["id"], "username": user["username"], "is_admin": user["is_admin"]}
         return jsonify({'access_token': access_token, 'user': user_data})
@@ -381,5 +383,6 @@ def import_all():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
