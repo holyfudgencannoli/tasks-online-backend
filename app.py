@@ -10,7 +10,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.config.from_object(Config)
-CORS(app, resources={r"/api/*": {"origins": ["react-tasks-online.pages.dev"]}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": ["https://react-tasks-online.pages.dev"]}}, supports_credentials=True)
 jwt = JWTManager(app)
 
 @jwt.token_in_blocklist_loader
@@ -279,4 +279,5 @@ def mark_complete():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
