@@ -205,10 +205,13 @@ def log_task():
 
 
 @app.route('/api/get-tasks-all', methods=['GET'])
+@jwt_required()
 def get_tasks_all():
+    user_id = get_jwt_identity()
+
     db_session = SessionLocal()
 
-    tasks = db_session.query(Task).all()
+    tasks = db_session.query(Task).filter_by(user_id=user_id).all()
 
     tasks_serialized = [t.to_dict() for t in tasks]
     db_session.close()
@@ -217,6 +220,8 @@ def get_tasks_all():
 @app.route('/api/get-tasks', methods=['POST'])
 @jwt_required()
 def get_tasks():
+    user_id = get_jwt_identity()
+
     data = request.get_json()
 
     date_str = data.get('date')
@@ -226,7 +231,8 @@ def get_tasks():
     db_session = SessionLocal()
 
     tasks = []
-    for t in db_session.query(Task).all():
+
+    for t in db_session.query(Task).filter_by(user_id=user_id).all():
         if t.log_datetime: 
             try:
                 task_date = datetime.fromisoformat(t.log_datetime).date()
@@ -242,9 +248,11 @@ def get_tasks():
 @app.route('/api/get-tasks-to-do', methods=['GET'])
 @jwt_required()
 def get_tasks_to_do():
+    user_id = get_jwt_identity()
+
     db_session = SessionLocal()
 
-    tt = db_session.query(Task).filter_by(completed=False).all()
+    tt = db_session.query(Task).filter_by(user_id=user_id, completed=False).all()
 
     tasks = []
     for t in tt:
@@ -256,13 +264,15 @@ def get_tasks_to_do():
 @app.route('/api/mark-complete', methods=['POST'])
 @jwt_required()
 def mark_complete():
+    user_id = get_jwt_identity()
+
     data = request.get_json()
 
     task_id = data.get('task_id')
 
     db_session = SessionLocal()
 
-    task_obj = db_session.query(Task).filter_by(id=task_id).first() #type:ignore
+    task_obj = db_session.query(Task).filter_by(id=task_id, user_id=user_id).first() #type:ignore
 
 
     task_obj.completed = True
@@ -274,10 +284,5 @@ def mark_complete():
 
     return jsonify({'message': 'Task marked complete!'})
 
-
-
-
 if __name__ == '__main__':
     app.run(debug=True)
-
-
