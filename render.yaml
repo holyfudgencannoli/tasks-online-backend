@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: tasks-online-backend
+    env: python
+    plan: starter
+    buildCommand: "pip install -r requirements.txt"
+    strtCommand: "gunicorn app:app"
+    disk:
+      name: db-disk
+      mountPath: /var/data
+      sizeGB: 1
