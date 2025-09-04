@@ -157,8 +157,9 @@ def login():
     data = request.get_json()
     user = get_user_by_username(data['username'])
     if user and check_password(user, data['password']):
-        access_token = create_access_token(identity=str(user['id']))
-        user_data = {"id": user["id"], "username": user["username"]}
+        additional_claims = {"is_admin": user.is_admin}
+        access_token = create_access_token(identity=user.id, additional_claims=additional_claims)
+        user_data = {"id": user["id"], "username": user["username"], "is_admin": user["is_admin"]}
         return jsonify({'access_token': access_token, 'user': user_data})
     return jsonify({"msg": "Bad username or password"}), 401
 
@@ -284,5 +285,98 @@ def mark_complete():
 
     return jsonify({'message': 'Task marked complete!'})
 
+@app.route("/api/export-all", methods=["GET"])
+@jwt_required()
+def export_all():
+    db_session = SessionLocal()
+
+    users = db_session.query(User).all()
+    tasks = db_session.query(Task).all()
+    db_session.close()
+
+    # Convert to DataFrames
+    users_df = pd.DataFrame([u.to_dict() for u in users])
+    tasks_df = pd.DataFrame([t.to_dict() for t in tasks])
+
+    # Save to in-memory Excel
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        users_df.to_excel(writer, index=False, sheet_name="Users")
+        tasks_df.to_excel(writer, index=False, sheet_name="Tasks")
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="backup_export.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+@app.route("/api/import-all", methods=["POST"])
+@jwt_required()
+def import_all():
+    claims = get_jwt()
+    if not claims.get("is_admin"):
+        return jsonify({"msg": "Admins only!"}), 403
+    else:
+        if "file" not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+        
+        file = request.files["file"]
+
+        try:
+            xls = pd.ExcelFile(file)
+        except Exception as e:
+            return jsonify({"error": f"Failed to read Excel: {str(e)}"}), 400
+
+        db_session = SessionLocal()
+        imported_users = imported_tasks = 0
+
+        # --- Users ---
+        if "Users" in xls.sheet_names:
+            users_df = pd.read_excel(xls, sheet_name="Users")
+            for _, row in users_df.iterrows():
+                existing = db_session.query(User).filter_by(username=row.get("username")).first()
+                if not existing:
+                    user = User(
+                        username=row.get("username"),
+                        email=row.get("email"),
+                        password=row.get("password"),  # ⚠️ ideally hash before import
+                    )
+                    db_session.add(user)
+                    imported_users += 1
+
+        # --- Tasks ---
+        if "Tasks" in xls.sheet_names:
+            tasks_df = pd.read_excel(xls, sheet_name="Tasks")
+            for _, row in tasks_df.iterrows():
+                existing = db_session.query(Task).filter_by(
+                    name=row.get("name"),
+                    log_datetime=row.get("log_datetime")
+                ).first()
+                if not existing:
+                    task = Task(
+                        name=row.get("name"),
+                        due_datetime=row.get("due_datetime"),
+                        log_datetime=row.get("log_datetime"),
+                        fin_datetime=row.get("fin_datetime"),
+                        completed=bool(row.get("completed")),
+                        memo=row.get("memo"),
+                        user_id=row.get("user_id")
+                    )
+                    db_session.add(task)
+                    imported_tasks += 1
+
+        db_session.commit()
+        db_session.close()
+
+        return jsonify({
+            "message": f"Imported {imported_users} users and {imported_tasks} tasks successfully"
+        })
+
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
+
