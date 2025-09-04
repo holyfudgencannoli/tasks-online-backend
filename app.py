@@ -45,11 +45,11 @@ def get_user_by_username(username):
     user = db_session.query(User).filter_by(username=username).first()
     db_session.close()
     if user:
-        # return consistent keys
         return {
             "id": user.id,
             "username": user.username,
-            "password_hash": user.password_hash  # <-- must match table
+            "password_hash": user.password_hash,
+            "is_admin": user.is_admin
         }
     return None
 
@@ -156,12 +156,8 @@ def register():
 def login():
     data = request.get_json()
     user = get_user_by_username(data['username'])
-    db_session = SessionLocal()
-    user_obj = db_session.query(User).filter_by(username=data.username).first()
-
-    user_data = user_obj.to_dict()
     if user and check_password(user, data['password']):
-        additional_claims = {"is_admin": user_data.is_admin}
+        additional_claims = {"is_admin": user['is_admin']}
         access_token = create_access_token(identity=user.id, additional_claims=additional_claims)
         user_data = {"id": user["id"], "username": user["username"], "is_admin": user["is_admin"]}
         return jsonify({'access_token': access_token, 'user': user_data})
@@ -292,29 +288,33 @@ def mark_complete():
 @app.route("/api/export-all", methods=["GET"])
 @jwt_required()
 def export_all():
-    db_session = SessionLocal()
+    claims = get_jwt()
+    if not claims.get("is_admin"):
+        return jsonify({"msg": "Admins only!"}), 403
+    else:
+        db_session = SessionLocal()
 
-    users = db_session.query(User).all()
-    tasks = db_session.query(Task).all()
-    db_session.close()
+        users = db_session.query(User).all()
+        tasks = db_session.query(Task).all()
+        db_session.close()
 
-    # Convert to DataFrames
-    users_df = pd.DataFrame([u.to_dict() for u in users])
-    tasks_df = pd.DataFrame([t.to_dict() for t in tasks])
+        # Convert to DataFrames
+        users_df = pd.DataFrame([u.to_dict() for u in users])
+        tasks_df = pd.DataFrame([t.to_dict() for t in tasks])
 
-    # Save to in-memory Excel
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        users_df.to_excel(writer, index=False, sheet_name="Users")
-        tasks_df.to_excel(writer, index=False, sheet_name="Tasks")
-    output.seek(0)
+        # Save to in-memory Excel
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            users_df.to_excel(writer, index=False, sheet_name="Users")
+            tasks_df.to_excel(writer, index=False, sheet_name="Tasks")
+        output.seek(0)
 
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name="backup_export.xlsx",
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+        return send_file(
+            output,
+            as_attachment=True,
+            download_name="backup_export.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
 @app.route("/api/import-all", methods=["POST"])
 @jwt_required()
@@ -338,21 +338,24 @@ def import_all():
 
         # --- Users ---
         if "Users" in xls.sheet_names:
-            users_df = pd.read_excel(xls, sheet_name="Users")
+            users_df = pd.read_excel(xls, sheet_name="Users").fillna("")
+
             for _, row in users_df.iterrows():
                 existing = db_session.query(User).filter_by(username=row.get("username")).first()
                 if not existing:
+                    password = row.get("password") or ""
+                    password_hash = generate_password_hash(password)
                     user = User(
                         username=row.get("username"),
                         email=row.get("email"),
-                        password=row.get("password"),  # ⚠️ ideally hash before import
+                        password_hash=password_hash,
                     )
                     db_session.add(user)
                     imported_users += 1
 
         # --- Tasks ---
         if "Tasks" in xls.sheet_names:
-            tasks_df = pd.read_excel(xls, sheet_name="Tasks")
+            tasks_df = pd.read_excel(xls, sheet_name="Tasks").fillna("")
             for _, row in tasks_df.iterrows():
                 existing = db_session.query(Task).filter_by(
                     name=row.get("name"),
@@ -383,6 +386,4 @@ def import_all():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
 
