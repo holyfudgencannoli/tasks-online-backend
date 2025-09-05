@@ -1,4 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
+import io
+import pandas as pd
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, JWTManager
 from sqlalchemy import Column, Integer, String, ForeignKey, Float, Boolean, DateTime, create_engine, MetaData, Table
@@ -125,6 +127,7 @@ class Task(Base):
     fin_datetime = Column(String)
     completed = Column(Boolean, default=False)
     memo = Column(String)
+    #priority = Column(Integer)
 
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     user = relationship("User", back_populates="tasks")
