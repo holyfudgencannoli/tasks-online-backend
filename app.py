@@ -90,8 +90,8 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 class User(Base):
     __tablename__ = 'users' 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(150), unique=True, nullable=False)
-    password_hash = Column(String(150), nullable=False)
+    username = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False)
     email = Column(String)
     phone = Column(String)
@@ -405,5 +405,6 @@ def import_all():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
