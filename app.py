@@ -151,7 +151,7 @@ class RepeatingTask(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
     created_at = Column(DateTime)
-    frequency = Column(Interval)
+    frequency_seconds = Column(BigInteger)
     first_due = Column(DateTime)
     next_due = Column(DateTime)
     last_completed = Column(DateTime)
@@ -556,6 +556,8 @@ def create_repeating_task():
                 minutes=frequency_minutes
             )
 
+            frequency_seconds = int(frequency.total_seconds())
+
             name = data.get('name')
             created_at = datetime.now()
             first_due = datetime.fromisoformat(data.get('first_due'))
@@ -566,7 +568,7 @@ def create_repeating_task():
             new_repeating_task = RepeatingTask(
                 name = name,
                 created_at = created_at,
-                frequency = frequency,
+                frequency_seconds=frequency_seconds,
                 first_due = first_due,
                 next_due = next_due,
                 memo = memo,
@@ -612,7 +614,4 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
 
