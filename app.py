@@ -100,7 +100,7 @@ class User(Base):
     created_at = Column(DateTime)
     last_login =  Column(DateTime)
     tasks = relationship("Task", back_populates="user")
-    repeating_tasks = relationship("Task", back_populates="user")
+    repeating_tasks = relationship("RepeatingTask", back_populates="user")
 
     def to_dict(self):
         return{
@@ -614,6 +614,7 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
