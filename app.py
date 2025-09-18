@@ -413,8 +413,8 @@ def mark_complete_repeating():
     task_obj = db_session.query(RepeatingTask).filter_by(id=task_id, user_id=user_id).first() #type:ignore
 
     task_obj.completed_for_period = True
-    task_obj.last_completed = datetime.now().isoformat()
-    task_obj.next_due = task_obj.last_completed + task_obj.frequency
+    task_obj.last_completed = datetime.now()
+    task_obj.next_due = task_obj.last_completed + timedelta(seconds=task_obj.frequency_seconds)
     print(datetime.now().isoformat())
 
     db_session.commit()
@@ -614,4 +614,6 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
 
