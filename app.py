@@ -167,7 +167,7 @@ class RepeatingTask(Base):
         return{
             'name': self.name,
             'created_at': self.created_at,
-            'frequency': self.frequency,
+            'frequency_seconds': self.frequency_seconds,
             'first_due': self.first_due,
             'next_due': self.next_due,
             'last_completed': self.last_completed,
@@ -614,6 +614,7 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
