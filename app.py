@@ -88,37 +88,6 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 
-class User(Base):
-    __tablename__ = 'users' 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(1024), unique=True, nullable=False)
-    password_hash = Column(String, nullable=False)
-    is_admin = Column(Boolean, default=False)
-    email = Column(String)
-    phone = Column(String)
-    provider = Column(String)
-    provider_id = Column(Integer)
-    created_at = Column(DateTime)
-    last_login =  Column(DateTime)
-    tasks = relationship("Task", back_populates="user")
-    repeating_tasks = relationship("RepeatingTask", back_populates="user")
-
-    def to_dict(self):
-        return{
-            'id': self.id,
-            'username': self.username,
-            'is_admin': self.is_admin,
-            'email': self.email,
-            'phone': self.phone,
-            'provider': self.provider,
-            'provider_id': self.provider_id,
-            'created_at': self.created_at,
-            'last_login': self.last_login,
-        }
-    
-    def get_id(self):
-        return str(self.id)
-
 class Task(Base):
     __tablename__ = 'tasks'
 
@@ -144,6 +113,7 @@ class Task(Base):
             'fin_datetime': self.fin_datetime,
             'completed': self.completed,
             'memo': self.memo,
+            'user_id': self.user_id
         }
     
 class RepeatingTask(Base):
@@ -174,7 +144,9 @@ class RepeatingTask(Base):
             'memo': self.memo,
             'high_priority': self.high_priority,
             'completed_for_period': self.completed_for_period,
+            'user_id': self.user_id
         }
+
 
 
 Base.metadata.create_all(bind=engine)
@@ -619,6 +591,7 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
