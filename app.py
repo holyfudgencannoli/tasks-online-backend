@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 app = Flask(__name__)
 app.config.from_object(Config)
-CORS(app, resources={r"/api/*": {"origins": ["https://tasks-online-frontend.pages.dev"]}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": ["https://tasks-online-frontend.pages.dev", "https://4qifkim-holycannoli-8081.exp.direct]}}, supports_credentials=True)
 jwt = JWTManager(app)
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload):
@@ -614,6 +614,7 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
