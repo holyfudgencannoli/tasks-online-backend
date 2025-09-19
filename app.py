@@ -3,12 +3,12 @@ import io
 import pandas as pd
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, JWTManager
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, Boolean, DateTime, create_engine, MetaData, Table, BigInteger
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, Boolean, DateTime, create_engine, MetaData, Table, Interval, BigInteger
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from config import Config
-from datetime import datetime
-
+from datetime import datetime, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -614,6 +614,7 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
