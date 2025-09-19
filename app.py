@@ -14,7 +14,6 @@ app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app, resources={r"/api/*": {"origins": ["https://tasks-online-frontend.pages.dev"]}}, supports_credentials=True)
 jwt = JWTManager(app)
-
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload):
     jti = jwt_payload["jti"]
@@ -87,6 +86,36 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 
+class User(Base):
+    __tablename__ = 'users' 
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(1024), unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    is_admin = Column(Boolean, default=False)
+    email = Column(String)
+    phone = Column(String)
+    provider = Column(String)
+    provider_id = Column(Integer)
+    created_at = Column(DateTime)
+    last_login =  Column(DateTime)
+    tasks = relationship("Task", back_populates="user", lazy="noload")
+    repeating_tasks = relationship("RepeatingTask", back_populates="user", lazy="noload")
+
+    def to_dict(self):
+        return{
+            'id': self.id,
+            'username': self.username,
+            'is_admin': self.is_admin,
+            'email': self.email,
+            'phone': self.phone,
+            'provider': self.provider,
+            'provider_id': self.provider_id,
+            'created_at': self.created_at,
+            'last_login': self.last_login,
+        }
+    
+    def get_id(self):
+        return str(self.id)
 
 class Task(Base):
     __tablename__ = 'tasks'
@@ -135,6 +164,7 @@ class RepeatingTask(Base):
 
     def to_dict(self):
         return{
+            'id': self.id,
             'name': self.name,
             'created_at': self.created_at,
             'frequency_seconds': self.frequency_seconds,
@@ -146,7 +176,6 @@ class RepeatingTask(Base):
             'completed_for_period': self.completed_for_period,
             'user_id': self.user_id
         }
-
 
 
 Base.metadata.create_all(bind=engine)
@@ -491,21 +520,15 @@ def import_all():
 @jwt_required()
 def list_repeating_tasks():
     user_id = get_jwt_identity()
+
     db_session = SessionLocal()
-    try:
-        tasks = db_session.query(RepeatingTask).filter_by(user_id=user_id).all()
-        serialized_tasks = [task.to_dict() for task in tasks]
-        return jsonify({'tasks': serialized_tasks}), 200
-    except SQLAlchemyError as e:
-        db_session.rollback()
-        print("DB ERROR:", str(e))
-        return jsonify({"error": str(e)}), 500
-    except Exception as e:
-        db_session.rollback()
-        print("PYTHON ERROR:", str(e))
-        return jsonify({"error": str(e)}), 500
-    finally:
-        db_session.close()
+
+    tasks = db_session.query(RepeatingTask).filter_by(user_id=user_id).all()
+    serialized_tasks = [task.to_dict() for task in tasks]
+
+    db_session.close()
+
+    return jsonify({'tasks': serialized_tasks})
 
 @app.route("/api/repeating-tasks", methods=["POST"])
 @jwt_required()
@@ -591,9 +614,6 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
 
 
 
