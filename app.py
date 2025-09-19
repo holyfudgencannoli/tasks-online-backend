@@ -520,15 +520,21 @@ def import_all():
 @jwt_required()
 def list_repeating_tasks():
     user_id = get_jwt_identity()
-
     db_session = SessionLocal()
-
-    tasks = db_session.query(RepeatingTask).filter_by(user_id=user_id).all()
-    serialized_tasks = [task.to_dict() for task in tasks]
-
-    db_session.close()
-
-    return jsonify({'tasks': serialized_tasks})
+    try:
+        tasks = db_session.query(RepeatingTask).filter_by(user_id=user_id).all()
+        serialized_tasks = [task.to_dict() for task in tasks]
+        return jsonify({'tasks': serialized_tasks}), 200
+    except SQLAlchemyError as e:
+        db_session.rollback()
+        print("DB ERROR:", str(e))
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        db_session.rollback()
+        print("PYTHON ERROR:", str(e))
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db_session.close()
 
 @app.route("/api/repeating-tasks", methods=["POST"])
 @jwt_required()
@@ -614,6 +620,7 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
