@@ -87,6 +87,7 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 
+
 class User(Base):
     __tablename__ = 'users' 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -131,7 +132,7 @@ class Task(Base):
     #priority = Column(Integer)
 
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user = relationship("User", back_populates="tasks")
+    user = relationship("User", back_populates="tasks", lazy="noload")
 
 
     def to_dict(self):
@@ -143,7 +144,6 @@ class Task(Base):
             'fin_datetime': self.fin_datetime,
             'completed': self.completed,
             'memo': self.memo,
-            'user_id': self.user_id
         }
     
 class RepeatingTask(Base):
@@ -160,7 +160,7 @@ class RepeatingTask(Base):
     completed_for_period = Column(Boolean, default=False)
 
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user = relationship("User", back_populates="repeating_tasks")
+    user = relationship("User", back_populates="repeating_tasks", lazy="noload")
 
 
     def to_dict(self):
@@ -174,7 +174,6 @@ class RepeatingTask(Base):
             'memo': self.memo,
             'high_priority': self.high_priority,
             'completed_for_period': self.completed_for_period,
-            'user_id': self.user_id
         }
 
 
@@ -620,6 +619,7 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
