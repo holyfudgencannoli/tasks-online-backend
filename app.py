@@ -156,7 +156,6 @@ class RepeatingTask(Base):
     last_completed = Column(DateTime)
     memo = Column(String)
     high_priority = Column(Boolean, default=False)
-    completed_for_period = Column(Boolean, default=False)
 
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     user = relationship("User", back_populates="repeating_tasks", lazy="noload")
@@ -173,7 +172,6 @@ class RepeatingTask(Base):
             'last_completed': self.last_completed,
             'memo': self.memo,
             'high_priority': self.high_priority,
-            'completed_for_period': self.completed_for_period,
             'user_id': self.user_id
         }
 
@@ -412,7 +410,6 @@ def mark_complete_repeating():
 
     task_obj = db_session.query(RepeatingTask).filter_by(id=task_id, user_id=user_id).first() #type:ignore
 
-    task_obj.completed_for_period = True
     task_obj.last_completed = datetime.now()
     task_obj.next_due = task_obj.last_completed + timedelta(seconds=task_obj.frequency_seconds)
     print(datetime.now().isoformat())
@@ -614,6 +611,7 @@ def create_repeating_task():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
