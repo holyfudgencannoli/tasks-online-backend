@@ -609,7 +609,8 @@ def delete_repeating_tasks(task_id):
 
     db_session = SessionLocal()
 
-    task = db_session.query(RepeatingTask).filter_by(id=task_id).first()
+    task = db_session.query(RepeatingTask).filter_by(id=task_id, user_id=user_id).first()
+
 
     db_session.delete(task)
     db_session.commit()
@@ -619,4 +620,5 @@ def delete_repeating_tasks(task_id):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
