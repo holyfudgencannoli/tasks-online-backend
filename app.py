@@ -169,8 +169,8 @@ class RepeatingTask(Base):
             'created_at': self.created_at.isoformat(),
             'frequency_seconds': self.frequency_seconds,
             'first_due': self.first_due.isoformat(),
-            'next_due': self.next_due.isoformat(),
-            'last_completed': self.last_completed.isoformat(),
+            'next_due': None if not self.next_due else self.next_due.isoformat(),
+            'last_completed': None if not self.last_completed else self.last_completed.isoformat(),
             'memo': self.memo,
             'high_priority': self.high_priority,
             'user_id': self.user_id
@@ -620,5 +620,6 @@ def delete_repeating_tasks(task_id):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
