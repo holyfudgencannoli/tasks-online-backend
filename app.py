@@ -14,6 +14,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app, resources={r"/api/*": {"origins": ["https://tasks-online-frontend.pages.dev", "https://4qifkim-holycannoli-8081.exp.direct"]}}, supports_credentials=True)
 jwt = JWTManager(app)
+
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload):
     jti = jwt_payload["jti"]
@@ -165,11 +166,11 @@ class RepeatingTask(Base):
         return{
             'id': self.id,
             'name': self.name,
-            'created_at': self.created_at,
+            'created_at': self.created_at.isoformat(),
             'frequency_seconds': self.frequency_seconds,
-            'first_due': self.first_due,
-            'next_due': self.next_due,
-            'last_completed': self.last_completed,
+            'first_due': self.first_due.isoformat(),
+            'next_due': self.next_due.isoformat(),
+            'last_completed': self.last_completed.isoformat(),
             'memo': self.memo,
             'high_priority': self.high_priority,
             'user_id': self.user_id
@@ -411,7 +412,7 @@ def mark_complete_repeating():
     task_obj = db_session.query(RepeatingTask).filter_by(id=task_id, user_id=user_id).first() #type:ignore
 
     task_obj.last_completed = datetime.now()
-    task_obj.next_due = task_obj.last_completed + timedelta(seconds=task_obj.frequency_seconds)
+    task_obj.next_due = task_obj.next_due + timedelta(seconds=task_obj.frequency_seconds)
     print(datetime.now().isoformat())
 
     db_session.commit()
@@ -558,7 +559,7 @@ def create_repeating_task():
             name = data.get('name')
             created_at = datetime.now()
             first_due = datetime.fromisoformat(data.get('first_due'))
-            next_due = first_due + frequency
+            next_due = first_due
             memo = data.get('memo')
             high_priority = data.get('high_priority')
 
@@ -601,23 +602,21 @@ def create_repeating_task():
 #     user_id = get_jwt_identity()
 
 
-# @app.route("/api/repeating-tasks/<int:task_id>", methods=["DELETE"])
-# @jwt_required()
-# def delete_repeating_tasks(task_id):
-#     user_id = get_jwt_identity()
+@app.route("/api/repeating-tasks/<int:task_id>", methods=["DELETE"])
+@jwt_required()
+def delete_repeating_tasks(task_id):
+    user_id = get_jwt_identity()
 
+    db_session = SessionLocal()
 
+    task = db_session.query(RepeatingTask).filter_by(id=task_id).first()
 
+    db_session.delete(task)
+    db_session.commit()
+    db_session.close()
+
+    return "", 204
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
-
-
-
-
-
-
 
