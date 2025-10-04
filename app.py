@@ -275,10 +275,25 @@ def get_tasks_all():
     tasks_serialized = [t.to_dict() for t in tasks]
     db_session.close()
     return jsonify({'tasks': tasks_serialized})
-
-@app.route('/api/get-tasks', methods=['POST'])
+@app.route('/api/get-tasks', methods=['GET'])
 @jwt_required()
 def get_tasks():
+    user_id = get_jwt_identity()
+
+    db_session = SessionLocal()
+
+    task_objects = db_session.query(Task).filter_by(user_id=user_id).all()
+
+    tasks = [t.to_dict() for t in task_objects]
+
+    db_session.close()
+
+    return jsonify({'tasks': tasks})
+
+
+@app.route('/api/get-tasks-by-date', methods=['POST'])
+@jwt_required()
+def get_tasks_by_date():
     user_id = get_jwt_identity()
 
     data = request.get_json()
@@ -292,14 +307,14 @@ def get_tasks():
     tasks = []
 
     for t in db_session.query(Task).filter_by(user_id=user_id).all():
-        if t.log_datetime: 
+        if t.due_datetime: 
             try:
-                task_date = datetime.fromisoformat(t.log_datetime).date()
+                task_date = datetime.fromisoformat(t.due_datetime).date()
                 if task_date == target_date:
                     tasks.append(t.to_dict())
             except ValueError:
                 # optionally log invalid date strings
-                print("Skipping invalid datetime:", t.log_datetime)
+                print("Skipping invalid datetime:", t.due_datetime)
     db_session.close()
 
     return jsonify({'tasks': tasks})
@@ -620,6 +635,7 @@ def delete_repeating_tasks(task_id):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
