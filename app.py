@@ -203,6 +203,7 @@ def register():
         return jsonify({"msg": "User already exists"}), 400
     return jsonify({"msg": "User created"}), 201
 
+
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -210,8 +211,12 @@ def login():
     if user and check_password(user, data['password']):
         if user['is_admin']:
             additional_claims = {"is_admin": True}
-            access_token = create_access_token(identity=str(user['id']), additional_claims=additional_claims)
-        access_token = create_access_token(identity=str(user['id']))
+            access_token = create_access_token(
+                identity=str(user['id']),
+                additional_claims=additional_claims,
+                expires_delta=timedelta(hours=1)
+            )
+        access_token = create_access_token(identity=str(user['id']), expires_delta=timedelta(hours=1))
 
         user_data = {"id": user["id"], "username": user["username"]}
         return jsonify({'access_token': access_token, 'user': user_data})
@@ -689,6 +694,7 @@ def delete_repeating_tasks(task_id):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
