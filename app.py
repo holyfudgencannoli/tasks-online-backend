@@ -376,9 +376,9 @@ def get_completed_tasks_by_date():
 from datetime import datetime
 
 @app.route('/api/get-tasks-today', methods=['GET'])
-# @jwt_required()
+@jwt_required()
 def get_tasks_today():
-    # user_id = get_jwt_identity()
+    user_id = get_jwt_identity()
     target_date = datetime.now().date()
 
     db_session = SessionLocal()
